@@ -1,0 +1,13 @@
+{
+  "name": "Adblocker",
+  "version": "1.0",
+  "description": "A simple adblocker",
+  "permissions": ["webRequest", "webRequestBlocking", "http://*/", "https://*/"],
+  "background": {
+    "scripts": ["*"]
+  },
+  "browser_action": {
+    "default_popup": "*"
+  },
+  "manifest_version": 2
+}
