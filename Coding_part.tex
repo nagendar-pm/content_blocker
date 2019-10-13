@@ -1,0 +1,105 @@
+\documentclass[12pt]{article}
+\begin{document}
+	\title{Coding Part}
+	\author{11\_Bugs}
+	\maketitle
+	\part*{Writing a Chrome extension:}
+	Chrome extensions are build using standard web technologies. The primary differences between an extension and a web app are that extensions have access to additional browser specific APIs and run differently that normal pages.
+	
+	To start off, create a new folder with the name of your extension and add the following file "manifest.json" to it. The manifest is an "index" of the extension and most of the fields are self explanatory.\\
+	\texttt{ \{ \\
+		"name": "Ad-blocker",\\
+			"version": "1.0",\\
+			"description": "A simple adblocker",\\
+		"permissions": ["webRequest", "webRequestBlocking", "http://*/", "https://*/"],\\
+		"background": \{ \\
+		"scripts": ["blocked\_domains.js", "background.js"] \\
+		\}, \\
+		"manifest\_version": 2 \\
+	\}
+} \\
+	The file manifest.json lists the components of the extension and describes what permissions it needs.
+	The permissions field lists what webpages the extension has permission to access. We want our extension to have access to all pages, hence the wildcard patterns. Note: permission to access an http page is distinct from permission for the https equivalent. The permission field also lists which "special" APIs and feature we wish to make use of.
+	
+	Our extension will run in the background and automatically intercept and filter requests. To set this up we give a list of scripts to load and run in the background. The order of scrips is important so make sure to list a script after its dependencies.
+	
+	\part*{webRequests API:}
+	The plan for the blocker is to intercept requests and block ones to domains hosting ads. Perusing the chrome docs reveals the chrome.webRequest.onBeforeRequest event. The onBefore request "Fires when a request is about to occur. This event is sent before any TCP connection is made and can be used to cancel or redirect requests.
+	background.js sets up an event handler to cancel all requests to the specified urls.
+	
+	\part*{Creating a blacklist:}
+	Now edit the blocked\_domains.js so that it is a valid JavaScript array that looks like this:
+	
+	\texttt{ var blocked\_domains = [ \\
+	"*://*.lb.usemaxserver.de/*", \\
+	"*://*.tracking.klickthru.com/*", \\
+	... \\
+	... \\
+	"*://*.zmedia.com/*", \\
+	"*://*.zv1.november-lax.com/*"]; \\ }
+
+	blocked\_domains.js consists of a single array of blacklisted domains
+	
+	Also our background.js will look like this.
+	\texttt{
+	chrome.webRequest.onBeforeRequest.addListener( \\
+	function(details) \{ \\
+		console.log("blocking:", details.url); \\
+		return \{cancel: true \}; \\
+	\}, \\
+	\{urls: blocked\_domains \}, \\
+	["blocking"] 
+	);
+}  \newpage
+	\part*{Adding UI:}
+	There is a possibility that this extension could break the main functionality of some sites. So let's add an enable/disable button. The first step is to update the manifest to specify the location of the html page that will show when the extension's icon is clicked on.
+	\texttt{ \\
+	"browser\_action": \{ \\
+		"default\_popup": "popup.html" \\
+	\}, \\ }
+	Add the following entry to the manifest to specify the control panel page
+	Now create fill out popup.html with a toggle button. Chrome does not like inline JavaScript in extension pages, so the JavaScript to handle button clicks will be in a separate file. \\
+	\texttt{
+	$<$html$>$ \\
+	$<$head$>$ \\
+	$<$script src="popup.js"$>$$<$/script$>$ \\
+	$<$/head$>$ \\
+	$<$body$>$ \\
+	$<$h3$>$Ad-blocker$<$/h3$>$ \\
+	$<$input type="button" id="toggle\_button" value="Disable" /$>$ \\
+	$<$hr$>$ \\
+	Written by Bugs \\
+	$<$/body$>$ \\
+	$<$/html$>$ } \\
+	Not much here. Just a header, button, and script. \\
+	
+	\part*{Finally...}
+	Final version of background.js \\
+	\texttt{
+	var enabled = true; \\
+	chrome.webRequest.onBeforeRequest.addListener( \\
+	function(details) \{ \\
+		return {cancel: enabled }; \\
+	\}, \\
+	\{urls: blocked\_domains \}, \\
+	["blocking"] \\
+	); \\
+}
+
+	popup.js \\
+	\texttt{
+	window.onload = function () \{ \\
+		function updateLabel() \{ \\
+			var enabled = chrome.extension.getBackgroundPage().enabled; \\
+			document.getElementById('toggle\_button').value = enabled ? "Disable" : "Enable"; \\
+		\} \\
+		document.getElementById('toggle\_button').onclick = function () \{ \\
+			var background = chrome.extension.getBackgroundPage(); \\
+			background.enabled = !background.enabled; \\
+			updateLabel(); \\
+		\}; \\
+		updateLabel(); \\
+	\}
+} \\
+	\textbf{Note:} So there we have it, a short simple adblocker. The only major problem is keeping the blacklist up to date, but scripts could make that easy. 
+\end{document}
